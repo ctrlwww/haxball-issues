@@ -1,47 +1,39 @@
-// This room script will notify every time a player touches the ball
+var room = HBInit({
+  roomName: "Stoni Tenis Arena 🏓",
+  maxPlayers: 2,
+  public: true,
+  noPlayer: true
+});
 
-var room = HBInit({});
+room.setDefaultStadium("Small"); // Osnova za mali teren
+room.setScoreLimit(5);
+room.setTimeLimit(3); // 3 minuta
 
-var playersThatTouchedTheBall = new Set();
+room.onPlayerJoin = function(player) {
+  room.sendChat("Dobrodošao, " + player.name + "! Spreman za stoni tenis?");
+  // Auto-assign
+  if (room.getPlayerList().length === 1) room.setPlayerTeam(player.id, 1);
+  else if (room.getPlayerList().length === 2) room.setPlayerTeam(player.id, 2);
+};
 
-function pointDistance(p1, p2) {
-	var d1 = p1.x - p2.x;
-	var d2 = p1.y - p2.y;
-	return Math.sqrt(d1 * d1 + d2 * d2);
-}
+room.onPlayerLeave = function(player) {
+  room.sendChat(player.name + " je napustio igru.");
+};
 
-function handleGameTick() {
-	var players = room.getPlayerList();
-	var ballPosition = room.getBallPosition();
-	var ballRadius = 10;
-	var playerRadius = 15;
-	var triggerDistance = ballRadius + playerRadius + 0.01;
+// Antifk filter
+room.onPlayerActivity = function(player) {
+  room.sendChat(player.name + " je aktivan.");
+};
 
-	for (var i = 0; i < players.length; i++) { // Iterate over all the players
-		var player = players[i];
-		if ( player.position == null ) continue; // Skip players that don't have a position
+// Lopta se resetuje kad padne gol
+room.onTeamGoal = function(team) {
+  room.sendChat((team === 1 ? "Crveni" : "Plavi") + " su postigli poen!");
+};
 
-		var distanceToBall = pointDistance(player.position, ballPosition);
-		var hadTouchedTheBall = playersThatTouchedTheBall.has(player.id);
+room.onGameStart = function(player) {
+  room.sendChat("🏓 Meč je počeo! Prvi do 5!");
+};
 
-		// This check is here so that the event is only notified the first game tick in which the player is touching the ball.
-		if ( !hadTouchedTheBall ) { 
-			if ( distanceToBall < triggerDistance ) {
-				room.sendChat(player.name + " touched the ball");
-				playersThatTouchedTheBall.add(player.id);
-			}
-		}else{
-			// If a player that had touched the ball moves away from the ball remove him from the set to allow the event to be notified again.
-			if ( distanceToBall > triggerDistance + 4 ) {
-				playersThatTouchedTheBall.delete(player.id);
-			}
-		}
-	}
-}
-
-function handleGameStart() {
-	playersThatTouchedTheBall.clear(); // Reset the set of players that reached the goal
-}
-
-room.onGameTick = handleGameTick;
-room.onGameStart = handleGameStart;
+room.onGameStop = function(player) {
+  room.sendChat("⏹ Meč je završen!");
+};
